@@ -144,8 +144,8 @@ final class Index extends Component
         return Property::query()
             ->when(
                 $this->search !== '',
-                fn (Builder $q): Builder =>
-                    $q->where('title', 'like', "%{$this->search}%")
+                fn (Builder $query): Builder =>
+                    $query->where('title', 'like', "%{$this->search}%")
             )
             ->paginate(10);
     }
@@ -236,6 +236,69 @@ final class Property extends Model
 
 ---
 
+## Complex Query Rule — Domain Query Objects (Mandatory)
+
+### Complex queries MUST be extracted into Query Objects.
+
+### Required structure:
+
+```
+app/Queries/{Domain}/
+```
+
+Example:
+
+```
+app/Queries/User/FindActiveUsersQuery.php
+app/Queries/Property/SearchPropertiesQuery.php
+```
+
+### A query is complex if it includes:
+
+- Multiple joins  
+- Aggregations (COUNT, SUM, GROUP BY, HAVING)  
+- Subqueries  
+- Dynamic filters  
+- Search logic  
+- More than two chained query constraints  
+- Performance-sensitive SQL  
+
+### Forbidden locations for complex queries
+
+❌ Controllers  
+❌ Livewire components  
+❌ Services  
+❌ Models (except small scopes)  
+
+### Required Query Object example
+
+```php
+declare(strict_types=1);
+
+namespace App\Queries\User;
+
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+
+final class FindActiveUsersQuery
+{
+    public static function execute(): Collection
+    {
+        return User::query()
+            ->where('active', true)
+            ->orderByDesc('created_at')
+            ->get();
+    }
+}
+```
+
+### Controllers and Services MUST call Query Objects
+
+❌ Inline complex query  
+✅ `FindActiveUsersQuery::execute()`
+
+---
+
 ## Livewire Performance Rules
 
 - ❌ No queries in Blade
@@ -243,18 +306,6 @@ final class Property extends Model
 - ✅ Always paginate
 - ✅ Always debounce inputs
 - ✅ Prefer computed properties over manual caching
-
----
-
-## Testing — Pest (Typed)
-
-```php
-it('creates a property', function (): void {
-    Property::factory()->create();
-
-    $this->assertDatabaseCount('properties', 1);
-});
-```
 
 ---
 
@@ -267,134 +318,73 @@ it('creates a property', function (): void {
 
 ---
 
-## Developer Mindset
-
-You must:
-- Think like a senior engineer
-- Favor simplicity over overengineering
-- Write maintainable code
-- Optimize for long-term scalability
-- Follow Laravel + Livewire **market best practices**
-
-
 # Composer Quality Gates — Pint & PHPStan (Mandatory)
 
-This document defines **mandatory quality gates** for Laravel projects using **Pint** and **PHPStan/Larastan**.
-
-The agent **MUST NOT** output code that would fail formatting or static analysis.
+The agent MUST NOT output code that would fail formatting or static analysis.
 
 ---
 
-## Rule — Composer Quality Gates (Pint + PHPStan)
+## 1. Inspect composer.json
 
-Before finalizing any Laravel code, you MUST:
-
----
-
-## 1. Inspect `composer.json`
-
-Check whether the project includes:
+If these exist:
 
 - `laravel/pint`
 - `phpstan/phpstan` or `nunomaduro/larastan`
 
-If present, you MUST assume they are active and **enforce their rules strictly**.
+You MUST enforce them.
 
 ---
 
-## 2. Pint Enforcement (Code Style)
-
-If `laravel/pint` exists:
-
-You MUST:
-
-- Format code to pass Pint
-- Follow Laravel coding style
-- Avoid style violations (spacing, imports, docblocks, typing)
-- Ensure clean imports and consistent formatting
-
-Assume this command **must pass**:
+## 2. Pint Enforcement
 
 ```bash
 ./vendor/bin/pint
 ```
 
-❌ If code would fail Pint → Rewrite it  
-✅ Code must be Pint-clean by default  
+❌ If Pint would fail → Rewrite  
+✅ Always Pint-clean  
 
 ---
 
-## 3. PHPStan / Larastan Enforcement (Static Analysis)
-
-If `phpstan/phpstan` or `nunomaduro/larastan` exists:
-
-You MUST:
-
-- Avoid undefined types
-- Avoid `mixed` when possible
-- Fully type:
-  - Properties
-  - Parameters
-  - Return values
-- Avoid unsafe null access
-- Ensure correct model property access
-- Avoid dynamic magic where static typing can be enforced
-- Respect strict static analysis assumptions
-
-Assume this command **must pass**:
+## 3. PHPStan / Larastan Enforcement
 
 ```bash
 ./vendor/bin/phpstan analyse
 ```
 
-❌ If code would fail PHPStan → Fix it  
-✅ Only produce PHPStan-safe code  
+❌ If PHPStan would fail → Fix  
+✅ Only static-analysis-safe code  
 
 ---
 
 ## 4. Strong Typing Compliance
 
-You MUST:
-
-- Use `declare(strict_types=1);`
-- Type **every** property and method
-- Avoid implicit casts
-- Ensure nullable types are explicit (`?Type`)
-- Prefer explicit types over inferred behavior
-
-❌ Weak typing is unacceptable  
-✅ Code must pass static analysis mentally  
+- `declare(strict_types=1);`
+- Type ALL properties & methods
+- Explicit nullable types only
+- No weak typing
 
 ---
 
 ## 5. Failure Policy
 
-If you detect that:
+If code might fail Pint or PHPStan:
 
-- Pint rules would fail
-- PHPStan would raise errors
-- Types are ambiguous
-- Return types are unsafe
-
-You MUST:
-
-1. Refactor the code  
-2. Briefly explain the fix  
-3. Output **only** the corrected version  
-
-🚫 You are **NOT allowed** to output code that would fail Pint or PHPStan  
+1. Refactor  
+2. Explain briefly  
+3. Output ONLY fixed code  
 
 ---
 
 ## Enforcement Mindset
 
-The agent must behave like a **strict CI pipeline**, refusing to produce low-quality or unsafe code.
+Behave like a **strict CI pipeline**.
 
 Quality > Speed  
 Correctness > Convenience  
 Static Safety > Dynamic Guessing  
 
-
+---
 
 ## File Operations
 

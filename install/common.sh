@@ -1,11 +1,10 @@
-
 #!/bin/bash
 
 # =============================================================================
-# OpenCode Agents Installation - Common Functions
+# OpenCode Agents Installation - Common Functions (WSL ONLY)
 # =============================================================================
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
 # Configuration
 # -----------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,17 +17,16 @@ AGENT_DIR="${CONFIG_DIR}/agent"
 SUBAGENT_DIR="${AGENT_DIR}/subagents"
 COMMAND_DIR="${CONFIG_DIR}/command"
 
-# Marker to identify managed files
 MARKER="@dev"
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
 # Colors
 # -----------------------------------------------------------------------------
 DIM='\033[2m'
 YELLOW='\033[33m'
 NC='\033[0m'
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
 # Spinner
 # -----------------------------------------------------------------------------
 spinner() {
@@ -38,7 +36,7 @@ spinner() {
 	local i=0
 
 	tput civis
-	while kill -0 $pid 2>/dev/null; do
+	while kill -0 "$pid" 2>/dev/null; do
 		local char="${spinchars:$i:1}"
 		printf "\r│  %s %s" "$char" "$message"
 		i=$(((i + 1) % ${#spinchars}))
@@ -56,13 +54,13 @@ run_with_spinner() {
 	eval "$command" &>/dev/null &
 	local pid=$!
 
-	spinner $pid "$message"
+	spinner "$pid" "$message"
 
-	wait $pid
+	wait "$pid"
 	return $?
 }
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
 # Print Functions
 # -----------------------------------------------------------------------------
 print_title() {
@@ -73,41 +71,19 @@ print_title() {
 	echo ""
 }
 
-print_section_start() {
-	echo "┌  $1"
-}
-
-print_item() {
-	echo "│  $1"
-}
-
-print_done() {
-	echo "│  ✓ $1"
-}
+print_section_start() { echo "┌  $1"; }
+print_item() { echo "│  $1"; }
+print_done() { echo "│  ✓ $1"; }
+print_update() { echo "│  ↑ $1"; }
+print_new() { echo "│  + $1"; }
 
 print_skip() {
 	echo -e "│  ${YELLOW}○${NC} $1 ${DIM}(user customized)${NC}"
 }
 
-print_update() {
-	echo "│  ↑ $1"
-}
-
-print_new() {
-	echo "│  + $1"
-}
-
-print_error() {
-	echo "│  ✗ $1"
-}
-
-print_section_end() {
-	echo "│"
-}
-
-print_final() {
-	echo "└  $1"
-}
+print_error() { echo "│  ✗ $1"; }
+print_section_end() { echo "│"; }
+print_final() { echo "└  $1"; }
 
 print_next_steps() {
 	echo ""
@@ -120,67 +96,64 @@ print_next_steps() {
 	echo ""
 }
 
+# ----------------------------------------------------------------------------- 
+# Platform Check — WSL ONLY
 # -----------------------------------------------------------------------------
-# System Checks
-# -----------------------------------------------------------------------------
-check_macos() {
-	if [[ "$(uname)" != "Darwin" ]]; then
-		print_error "This script is only supported on macOS"
+check_wsl() {
+	if ! grep -qi microsoft /proc/version 2>/dev/null; then
+		print_error "This installer only supports WSL"
 		exit 1
 	fi
 }
 
+# ----------------------------------------------------------------------------- 
+# Installation — OpenCode CLI (WSL)
 # -----------------------------------------------------------------------------
-# Installation Functions
-# -----------------------------------------------------------------------------
-install_homebrew() {
-	if command -v brew &>/dev/null; then
-		print_done "Homebrew"
-	else
-		run_with_spinner "Installing Homebrew" '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
-		if [[ $? -ne 0 ]]; then
-			print_error "Failed to install Homebrew"
-			exit 1
-		fi
-		print_done "Homebrew"
-	fi
-}
-
 install_opencode_cli() {
 	if command -v opencode &>/dev/null; then
 		print_done "OpenCode CLI"
-	else
-		run_with_spinner "Installing OpenCode CLI" "brew install opencode"
-		if [[ $? -ne 0 ]]; then
-			print_error "Failed to install OpenCode CLI"
-			exit 1
-		fi
+		return
+	fi
+
+	# Preferred install: official script
+	print_item "Installing OpenCode CLI (curl installer)"
+
+	run_with_spinner "Installing OpenCode CLI" \
+		"curl -fsSL https://opencode.ai/install | bash"
+
+	if command -v opencode &>/dev/null; then
 		print_done "OpenCode CLI"
+		return
 	fi
-}
 
-install_opencode_desktop() {
-	if [[ -d "/Applications/OpenCode.app" ]]; then
-		print_done "OpenCode Desktop"
-	else
-		run_with_spinner "Installing OpenCode Desktop" "brew install --cask opencode-desktop"
-		if [[ $? -ne 0 ]]; then
-			print_error "Failed to install OpenCode Desktop"
-			exit 1
+	# Fallback: npm
+	if command -v npm &>/dev/null; then
+		print_item "Fallback: Installing OpenCode CLI via npm"
+
+		run_with_spinner "Installing via npm" \
+			"npm install -g opencode-ai"
+
+		if command -v opencode &>/dev/null; then
+			print_done "OpenCode CLI (npm fallback)"
+			return
 		fi
-		print_done "OpenCode Desktop"
 	fi
+
+	print_error "Failed to install OpenCode CLI"
+	print_item "Install manually: https://opencode.ai/docs"
+	exit 1
 }
 
+# ----------------------------------------------------------------------------- 
+# Dependencies Entry
+# -----------------------------------------------------------------------------
 install_dependencies() {
 	print_section_start "Dependencies"
-	install_homebrew
 	install_opencode_cli
-	install_opencode_desktop
 	print_section_end
 }
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
 # Config Functions
 # -----------------------------------------------------------------------------
 create_directories() {
@@ -191,14 +164,10 @@ create_directories() {
 create_opencode_json() {
 	local config_file="${CONFIG_DIR}/opencode.json"
 
-	# Check if file exists and has our marker (in a comment-safe way for JSON)
 	if [[ -f "$config_file" ]]; then
-		# For JSON, we check if it contains our schema URL as identifier
 		if grep -q "opencode.ai/config.json" "$config_file" 2>/dev/null; then
-			# It's our file, update it
 			:
 		else
-			# User's custom file, skip
 			print_skip "opencode.json"
 			return
 		fi
@@ -247,11 +216,9 @@ setup_config() {
 	print_section_end
 }
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
 # Smart Copy Functions
 # -----------------------------------------------------------------------------
-
-# Check if a file is managed by (has our marker)
 is_managed_file() {
 	local file="$1"
 	if [[ -f "$file" ]]; then
@@ -261,17 +228,11 @@ is_managed_file() {
 	return 1
 }
 
-# Prompt user for file update
 prompt_update() {
 	local name="$1"
 
-	if [[ "$UPDATE_ALL" == true ]]; then
-		return 0
-	fi
-
-	if [[ "$SKIP_ALL" == true ]]; then
-		return 1
-	fi
+	if [[ "$UPDATE_ALL" == true ]]; then return 0; fi
+	if [[ "$SKIP_ALL" == true ]]; then return 1; fi
 
 	echo -e "│  ${YELLOW}?${NC} ${name} has a new version"
 	read -p "│    Update? [y]es / [n]o / [A]ll / [S]kip all: " choice
@@ -285,10 +246,6 @@ prompt_update() {
 	esac
 }
 
-# Smart copy that preserves user customizations
-# - New file: copy it
-# - Existing with marker: ask to update (it's ours)
-# - Existing without marker: skip it (user's custom file)
 smart_copy() {
 	local src_file="$1"
 	local target_file="$2"
@@ -300,11 +257,9 @@ smart_copy() {
 	fi
 
 	if [[ ! -f "$target_file" ]]; then
-		# New file, just copy
 		cp "$src_file" "$target_file"
 		print_new "$name"
 	elif is_managed_file "$target_file"; then
-		# Our file, check if different and ask to update
 		if ! diff -q "$src_file" "$target_file" &>/dev/null; then
 			if prompt_update "$name"; then
 				cp "$src_file" "$target_file"
@@ -316,7 +271,6 @@ smart_copy() {
 			print_done "$name"
 		fi
 	else
-		# User's custom file, preserve it
 		print_skip "$name"
 	fi
 }
@@ -344,3 +298,13 @@ copy_command() {
 
 	smart_copy "$src_file" "$target_file" "$command"
 }
+
+# ----------------------------------------------------------------------------- 
+# Entry Point
+# -----------------------------------------------------------------------------
+check_wsl
+install_dependencies
+setup_config
+
+print_final "Installation completed"
+print_next_steps
