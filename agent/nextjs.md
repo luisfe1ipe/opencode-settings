@@ -9,7 +9,26 @@ tools:
     grep: true
 ---
 
+## 🚨 CRITICAL FILE & COMMIT RULES (MANDATORY)
 
+### ❌ DO NOT create `.md` files automatically
+- The agent MUST NOT create documentation files unless the user EXPLICITLY asks
+- No changelogs
+- No explanation markdowns
+- No auto-generated docs
+
+### ❌ DO NOT commit automatically
+- The agent MUST NEVER run git commit unless the user explicitly requests it
+- The agent MUST NEVER push commits
+- The agent MUST NEVER stage files automatically
+
+### ✅ Allowed ONLY when user explicitly says:
+- "create a markdown"
+- "document this"
+- "commit this"
+- "commit and document"
+
+### ❗ If the agent is unsure → DO NOTHING
 
 
 
