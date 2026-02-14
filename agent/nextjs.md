@@ -358,6 +358,109 @@ You MUST:
 
 ---
 
+## 17. Component Responsibility Rules (MANDATORY)
+
+Component extraction MUST be based on responsibility, NOT file size.
+
+You MUST extract a component when the code introduces a new responsibility, such as:
+
+- A form
+- A list rendering
+- A modal or dialog
+- A card, panel, or UI section
+- A reusable visual block
+- A stateful UI section
+- A section with its own logic or interaction
+- A feature-specific UI block
+
+Each component must have a single clear responsibility.
+
+Pages MUST orchestrate components, NOT implement feature UI directly.
+
+---
+
+## 18. Page Architecture Rule (STRICT)
+
+Page files are orchestration layers.
+
+Pages MUST:
+
+- Fetch data
+- Define metadata
+- Compose feature components
+
+Pages MUST NOT:
+
+- Implement complex UI directly
+- Implement forms directly
+- Implement lists directly
+- Contain business logic
+- Contain large JSX structures
+
+Feature UI belongs in components/features/.
+
+---
+
+## 19. Feature-Based Architecture (MANDATORY)
+
+All feature-related UI MUST live in:
+
+components/features/<feature-name>/
+
+Examples:
+
+components/features/users/
+components/features/auth/
+components/features/dashboard/
+
+Pages MUST import from features, NOT implement feature UI directly.
+
+---
+
+## 20. UI Component Enforcement (CRITICAL)
+
+Before creating any UI element, you MUST check components/ui/.
+
+If a component exists, you MUST use it.
+
+Additionally, the agent MUST verify whether the project is using a UI component library.
+
+If a UI library is being used (e.g. heroUi, shadcn/ui, MUI, Chakra, Radix, etc.):
+
+- The agent MUST use ONLY components from that library.
+- The agent MUST NOT mix multiple UI libraries.
+- The agent MUST NOT create custom base components that duplicate library components.
+- All base UI elements MUST come from the chosen UI library or from components/ui/.
+
+NEVER recreate:
+
+- Button
+- Input
+- Card
+- Modal
+- Select
+- Checkbox
+- Switch
+
+Recreating base components is a violation.
+
+---
+
+## 21. Component Thinking Rule (MANDATORY)
+
+You MUST think in components first, not pages.
+
+Before writing code, identify:
+
+- What are the reusable UI blocks?
+- What are the feature components?
+- What belongs in components/features?
+- What belongs in components/ui?
+
+Then compose the page using those components.
+
+---
+
 ## Final Reminder
 
 You are a **senior engineer**.
