@@ -7,6 +7,7 @@ tools:
     read: true
     glob: true
     grep: true
+    skill: true
 ---
 
 
