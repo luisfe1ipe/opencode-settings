@@ -4,29 +4,32 @@
 # OpenCode Agents Installation - Common Functions (WSL ONLY)
 # =============================================================================
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Configuration
 # -----------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
 AGENT_SRC="${REPO_DIR}/agent"
 COMMAND_SRC="${REPO_DIR}/command"
+SKILL_SRC="${REPO_DIR}/skills"
 
 CONFIG_DIR="${HOME}/.config/opencode"
 AGENT_DIR="${CONFIG_DIR}/agent"
 SUBAGENT_DIR="${AGENT_DIR}/subagents"
 COMMAND_DIR="${CONFIG_DIR}/command"
+SKILL_DIR="${CONFIG_DIR}/skills"
 
 MARKER="@dev"
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Colors
 # -----------------------------------------------------------------------------
 DIM='\033[2m'
 YELLOW='\033[33m'
 NC='\033[0m'
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Spinner
 # -----------------------------------------------------------------------------
 spinner() {
@@ -60,7 +63,7 @@ run_with_spinner() {
 	return $?
 }
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Print Functions
 # -----------------------------------------------------------------------------
 print_title() {
@@ -96,7 +99,7 @@ print_next_steps() {
 	echo ""
 }
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Platform Check — WSL ONLY
 # -----------------------------------------------------------------------------
 check_wsl() {
@@ -106,7 +109,7 @@ check_wsl() {
 	fi
 }
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Installation — OpenCode CLI (WSL)
 # -----------------------------------------------------------------------------
 install_opencode_cli() {
@@ -115,7 +118,6 @@ install_opencode_cli() {
 		return
 	fi
 
-	# Preferred install: official script
 	print_item "Installing OpenCode CLI (curl installer)"
 
 	run_with_spinner "Installing OpenCode CLI" \
@@ -126,7 +128,6 @@ install_opencode_cli() {
 		return
 	fi
 
-	# Fallback: npm
 	if command -v npm &>/dev/null; then
 		print_item "Fallback: Installing OpenCode CLI via npm"
 
@@ -144,7 +145,7 @@ install_opencode_cli() {
 	exit 1
 }
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Dependencies Entry
 # -----------------------------------------------------------------------------
 install_dependencies() {
@@ -153,12 +154,13 @@ install_dependencies() {
 	print_section_end
 }
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Config Functions
 # -----------------------------------------------------------------------------
 create_directories() {
 	mkdir -p "$SUBAGENT_DIR"
 	mkdir -p "$COMMAND_DIR"
+	mkdir -p "$SKILL_DIR"
 }
 
 create_opencode_json() {
@@ -216,7 +218,7 @@ setup_config() {
 	print_section_end
 }
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Smart Copy Functions
 # -----------------------------------------------------------------------------
 is_managed_file() {
@@ -275,11 +277,13 @@ smart_copy() {
 	fi
 }
 
+# -----------------------------------------------------------------------------
+# Copy Agents / Commands
+# -----------------------------------------------------------------------------
 copy_agent() {
 	local agent="$1"
 	local src_file="${AGENT_SRC}/${agent}"
 	local target_file="${AGENT_DIR}/${agent}"
-
 	smart_copy "$src_file" "$target_file" "$agent"
 }
 
@@ -287,7 +291,6 @@ copy_subagent() {
 	local subagent="$1"
 	local src_file="${AGENT_SRC}/subagents/${subagent}"
 	local target_file="${SUBAGENT_DIR}/${subagent}"
-
 	smart_copy "$src_file" "$target_file" "$subagent"
 }
 
@@ -295,16 +298,67 @@ copy_command() {
 	local command="$1"
 	local src_file="${COMMAND_SRC}/${command}"
 	local target_file="${COMMAND_DIR}/${command}"
-
 	smart_copy "$src_file" "$target_file" "$command"
 }
 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
+# Skills Installation (GLOBAL)
+# -----------------------------------------------------------------------------
+copy_skill() {
+	local skill="$1"
+	local src_dir="${SKILL_SRC}/${skill}"
+	local target_dir="${SKILL_DIR}/${skill}"
+
+	if [[ ! -d "$src_dir" ]]; then
+		print_error "Skill source not found: ${skill}"
+		exit 1
+	fi
+
+	if [[ ! -d "$target_dir" ]]; then
+		cp -r "$src_dir" "$target_dir"
+		print_new "skill:${skill}"
+		return
+	fi
+
+	local src_file="${src_dir}/SKILL.md"
+	local target_file="${target_dir}/SKILL.md"
+
+	if is_managed_file "$target_file"; then
+		if ! diff -q "$src_file" "$target_file" &>/dev/null; then
+			if prompt_update "skill:${skill}"; then
+				cp "$src_file" "$target_file"
+				print_update "skill:${skill}"
+			else
+				print_skip "skill:${skill}"
+			fi
+		else
+			print_done "skill:${skill}"
+		fi
+	else
+		print_skip "skill:${skill}"
+	fi
+}
+
+install_skills() {
+	print_section_start "Skills"
+
+	if [[ -d "$SKILL_SRC" ]]; then
+		for dir in "$SKILL_SRC"/*; do
+			[[ -d "$dir" ]] || continue
+			copy_skill "$(basename "$dir")"
+		done
+	fi
+
+	print_section_end
+}
+
+# -----------------------------------------------------------------------------
 # Entry Point
 # -----------------------------------------------------------------------------
 check_wsl
 install_dependencies
 setup_config
+install_skills
 
 print_final "Installation completed"
 print_next_steps
