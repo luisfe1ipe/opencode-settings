@@ -23,6 +23,7 @@ setup_config
 echo "◇  Agents"
 copy_agent laravel.md
 copy_agent nextjs.md
+copy_agent fullstack.md
 print_section_end
 
 

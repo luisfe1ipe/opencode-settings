@@ -29,6 +29,12 @@ Agentes presentes hoje
   - Regras principais: `declare(strict_types=1);` obrigatório; tipagem explícita de propriedades e retornos; extrair queries complexas em Query Objects; preferir Actions e componentes Livewire tipados.
   - Arquivo com especificação completa: `agent/laravel.md`
 
+- `agent/fullstack.md` — Fullstack Next.js + Laravel Expert Agent
+  - Marker: `@fullstack`
+  - Propósito: unificar a expertise de Next.js e Laravel para o desenvolvimento de aplicações fullstack completas e integradas.
+  - Regras principais: combina as regras de tipagem estrita do Next.js e Laravel; foco em contratos de API robustos; arquitetura limpa em ambas as pontas.
+  - Arquivo com especificação completa: `agent/fullstack.md`
+
 Observações rápidas
 - Se o instalador mostrar "This installer only supports WSL", execute os scripts dentro de uma sessão WSL.
 - Se o `opencode` não for instalado automaticamente, rode manualmente: `curl -fsSL https://opencode.ai/install | bash` ou `npm install -g opencode-ai`.
