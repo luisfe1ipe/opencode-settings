@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# OpenCode Agents Installation - Common Functions (WSL ONLY)
+# OpenCode Agents Installation - Common Functions
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -46,7 +46,7 @@ spinner() {
 		sleep 0.1
 	done
 	tput cnorm
-	printf "\r"
+	printf "\r\033[K"
 }
 
 run_with_spinner() {
@@ -60,7 +60,9 @@ run_with_spinner() {
 	spinner "$pid" "$message"
 
 	wait "$pid"
-	return $?
+	local result=$?
+	echo ""
+	return $result
 }
 
 # -----------------------------------------------------------------------------
@@ -99,19 +101,30 @@ print_next_steps() {
 	echo ""
 }
 
-# -----------------------------------------------------------------------------
-# Platform Check — WSL ONLY
-# -----------------------------------------------------------------------------
-check_wsl() {
-	if ! grep -qi microsoft /proc/version 2>/dev/null; then
-		print_error "This installer only supports WSL"
+# ---------------------------------------------------------------------------
+# Platform Check — Supported Platforms
+# ---------------------------------------------------------------------------
+check_platform() {
+	local is_wsl=false
+	local is_linux=false
+
+	if grep -qi microsoft /proc/version 2>/dev/null; then
+		is_wsl=true
+	fi
+
+	if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+		is_linux=true
+	fi
+
+	if ! ($is_wsl || $is_linux); then
+		print_error "This installer only supports WSL, PopOS, Ubuntu, and other Linux distributions"
 		exit 1
 	fi
 }
 
-# -----------------------------------------------------------------------------
-# Installation — OpenCode CLI (WSL)
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Installation — OpenCode CLI
+# ---------------------------------------------------------------------------
 install_opencode_cli() {
 	if command -v opencode &>/dev/null; then
 		print_done "OpenCode CLI"
@@ -123,6 +136,21 @@ install_opencode_cli() {
 	run_with_spinner "Installing OpenCode CLI" \
 		"curl -fsSL https://opencode.ai/install | bash"
 
+	# Reload PATH after installation
+	if [ -f "${HOME}/.profile" ]; then
+		. "${HOME}/.profile"
+	fi
+	if [ -f "${HOME}/.bashrc" ]; then
+		. "${HOME}/.bashrc"
+	fi
+
+	# Check common installation locations
+	if [ -f "${HOME}/.local/bin/opencode" ]; then
+		export PATH="${HOME}/.local/bin:${PATH}"
+	elif [ -f "${HOME}/.local/bin/opencode-ai" ]; then
+		export PATH="${HOME}/.local/bin:${PATH}"
+	fi
+
 	if command -v opencode &>/dev/null; then
 		print_done "OpenCode CLI"
 		return
@@ -133,6 +161,14 @@ install_opencode_cli() {
 
 		run_with_spinner "Installing via npm" \
 			"npm install -g opencode-ai"
+
+		# Reload PATH after npm installation
+		if [ -f "${HOME}/.profile" ]; then
+			. "${HOME}/.profile"
+		fi
+		if [ -f "${HOME}/.bashrc" ]; then
+			. "${HOME}/.bashrc"
+		fi
 
 		if command -v opencode &>/dev/null; then
 			print_done "OpenCode CLI (npm fallback)"
@@ -352,13 +388,8 @@ install_skills() {
 	print_section_end
 }
 
-# -----------------------------------------------------------------------------
-# Entry Point
-# -----------------------------------------------------------------------------
-check_wsl
-install_dependencies
-setup_config
-install_skills
-
-print_final "Installation completed"
-print_next_steps
+# ---------------------------------------------------------------------------
+# Entry Point (only execute if sourced as main script, not when included)
+# ---------------------------------------------------------------------------
+# This section is left empty since common.sh is meant to be sourced by other scripts
+# The calling script (dev.sh) will control the execution flow
