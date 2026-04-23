@@ -1,6 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
+  },
+  "skills": {
+    "path": "./skills"
+  },
+  "mcp": {
     "nextjs": {
       "type": "local",
       "command": [
