@@ -43,6 +43,7 @@ copy_agent nextjs.md
 copy_agent fullstack.md
 print_section_end
 
+install_commands
 install_skills
 
 print_final "Done"

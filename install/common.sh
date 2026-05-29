@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
 AGENT_SRC="${REPO_DIR}/agent"
-COMMAND_SRC="${REPO_DIR}/command"
+COMMAND_SRC="${REPO_DIR}/commands"
 SKILL_SRC="${REPO_DIR}/skills"
 
 CONFIG_DIR="${HOME}/.config/opencode"
@@ -335,6 +335,22 @@ copy_command() {
 	local src_file="${COMMAND_SRC}/${command}"
 	local target_file="${COMMAND_DIR}/${command}"
 	smart_copy "$src_file" "$target_file" "$command"
+}
+
+# -----------------------------------------------------------------------------
+# Commands Installation
+# -----------------------------------------------------------------------------
+install_commands() {
+	print_section_start "Commands"
+
+	if [[ -d "$COMMAND_SRC" ]]; then
+		for file in "$COMMAND_SRC"/*.md; do
+			[[ -f "$file" ]] || continue
+			copy_command "$(basename "$file")"
+		done
+	fi
+
+	print_section_end
 }
 
 # -----------------------------------------------------------------------------
